@@ -1,23 +1,27 @@
+# todo это что вообще
 networks:
-  monitor-net:
-    external: true
+  monitor_net:
+#    driver: bridge
+#    ipam:
+#      config:
+#        -subnet: 172.20.0.0/16
 
 services:
 
+  common: &common
+    #todo я ничего не понял https://blog.phusion.nl/2015/01/20/docker-and-the-pid-1-zombie-reaping-problem/
+    init: true
+    
+
   postgres:
-    image: "postgres:${POSTGRES_VERSION:-14.1}"
+    <<: *common
+    image: postgres:${POSTGRES_VERSION:-14.1-alpine}
     container_name: postgres
     env_file:
       - "${POSTGRES__ENV_FILE:-postgres/.env}"
-    #todo check!
+    #todo норм параметры?
     command:
       - "postgres"
-      - "-c"
-      - "max_connections=50"
-      - "-c"
-      - "shared_buffers=1GB"
-      - "-c"
-      - "effective_cache_size=4GB"
       - "-c"
       - "work_mem=16MB"
       - "-c"
@@ -53,8 +57,8 @@ services:
       timeout: "${POSTGRES__HEALTHCHECK__TIMEOUT:-5s}"
       start_period: "${POSTGRES__HEALTHCHECK__TIMEOUT:-5s}"
       retries: "${POSTGRES__HEALTHCHECK__RETRIES:-5}"
-    # Docker swarm only
     deploy:
+      mode: replicated
       replicas: "${POSTGRES__DEPLOY__REPLICAS:-1}"
       placement:
         max_replicas_per_node: "${POSTGRES__DEPLOY__PLACEMENT__MAX_REPLICAS_PER_NODE:-1}"
@@ -80,7 +84,8 @@ services:
     stop_grace_period: '${STOP_GRACE_PERIOD:-5S}'
 
   prometheus:
-    image: "prom/prometheus:${PROMETHEUS_VERSION:-v2.32.0}"
+    <<: *common
+    image: prom/prometheus:${PROMETHEUS_VERSION:-v2.32.0}
     container_name: prometheus
     env_file:
       - "${PROMETHEUS__ENV_FILE:-prometheus/prometheus.yml}"
